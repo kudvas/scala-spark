@@ -1,2 +1,2 @@
 # scala-spark
-Coursera scala Spark
+Coursera scala Spark Wikipedia excercize
