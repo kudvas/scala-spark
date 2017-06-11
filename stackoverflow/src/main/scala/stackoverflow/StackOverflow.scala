@@ -1,13 +1,14 @@
 package stackoverflow
 
-import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-import org.apache.spark.rdd.RDD
-import org.apache.spark.rdd.RDD._
+import _root_.org.apache.spark.rdd.RDD
+import _root_.org.apache.spark.{SparkConf, SparkContext}
+import _root_.org.apache.spark.SparkConf
+import _root_.org.apache.spark.rdd.RDD._
+import _root_.org.apache.spark.SparkContext
+import _root_.org.apache.spark.SparkContext._
+import _root_.org.apache.spark.rdd.RDD
 import annotation.tailrec
 import scala.reflect.ClassTag
-import org.apache.spark.SparkContext._
 
 /** A raw stackoverflow posting, either a question or an answer */
 case class Posting(postingType: Int, id: Int, acceptedAnswer: Option[Int], parentId: Option[Int], score: Int, tags: Option[String]) extends Serializable
@@ -16,12 +17,12 @@ case class Posting(postingType: Int, id: Int, acceptedAnswer: Option[Int], paren
 /** The main class */
 object StackOverflow extends StackOverflow {
 
-  @transient lazy val conf: SparkConf = new SparkConf().setMaster("local").setAppName("StackOverflow")
-
+  @transient lazy val conf: SparkConf = new SparkConf().setAppName("wikiSearch").setMaster("local[2]").set("spark.driver.host", "localhost")
   @transient lazy val sc: SparkContext = new SparkContext(conf)
 
   /** Main function */
   def main(args: Array[String]): Unit = {
+
 
     val lines = sc.textFile("src/main/resources/stackoverflow/stackoverflow.csv")
     val raw = rawPostings(lines)
@@ -82,9 +83,9 @@ class StackOverflow extends Serializable {
 
   /** Group the questions and answers together */
   def groupedPostings(postings: RDD[Posting]): RDD[(Int, Iterable[(Posting, Posting)])] = {
-    val questions = postings.filter(_.postingType == 1).map(x => (x.id, x))
-    val answers = postings.filter(_.postingType == 2).map(x => (x.parentId, x))
-    answers.join(answers).map(x => (x._1.get, x._2)).groupByKey()
+    val questions = postings.filter(_.postingType == 1).map(q => (q.id, q));
+    val answers = postings.filter(_.postingType == 2).map(a => (a.parentId.get, a));
+    questions.join(answers).groupByKey()
   }
 
 
@@ -102,9 +103,8 @@ class StackOverflow extends Serializable {
       }
       highScore
     }
+    grouped.flatMap(x => x._2.groupBy(_._1).mapValues(x => answerHighScore(x.map(_._2).toArray)))
 
-    grouped.values.map((_.1,))
-    null
   }
 
 
